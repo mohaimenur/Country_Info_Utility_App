@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -53,14 +54,20 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
-    implementation ("com.squareup.retrofit2:retrofit:3.0.0")
-    implementation ("com.squareup.retrofit2:converter-gson:3.0.0")
-    implementation ("com.squareup.retrofit2:converter-scalars:3.0.0")
+
+//    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+//    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation ("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
     implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     implementation ("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
     implementation("io.coil-kt:coil-compose:2.7.0")
+//    implementation("io.coil-kt:coil-svg:2.7.0")
 }

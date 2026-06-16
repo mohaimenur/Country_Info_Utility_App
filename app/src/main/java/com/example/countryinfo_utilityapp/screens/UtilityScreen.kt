@@ -1,156 +1,329 @@
 package com.example.countryinfo_utilityapp.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.countryinfo_utilityapp.api.CountryResponse
+import com.example.countryinfo_utilityapp.api.CountryNowItem
 import com.example.countryinfo_utilityapp.viewmodels.CountryViewModel
-import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
     val countries by viewModel.countries.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    var expanded by remember { mutableStateOf(value = false) }
-    var selectedCountryForDisplay by remember { mutableStateOf<CountryResponse?>(null) }
-    
-    // Filter by query or show top 20 if empty
-    val filteredCountries = if (searchQuery.isEmpty()) {
-        countries.take(20)
-    } else {
-        countries.filter {
-            it.name.common.contains(searchQuery, ignoreCase = true)
-        }
-    }
+    var showDialog by remember { mutableStateOf(false) }
+    var tempSelectedCountry by remember { mutableStateOf<CountryNowItem?>(null) }
+    var confirmedCountryForDisplay by remember { mutableStateOf<CountryNowItem?>(null) }
+    var internalSearchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Country Search",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 32.dp)
         )
 
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it }
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = {
-                    viewModel.onSearchQueryChange(it)
-                    expanded = true
-                    // Reset display if user starts typing again
-                    selectedCountryForDisplay = null
+        // Show error + retry button if loading failed and no countries loaded
+        if (error != null && countries.isEmpty()) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Button(onClick = { viewModel.fetchCountries() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Retry")
+                }
+            }
+        } else {
+            // Country selector dropdown box
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Country",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = MaterialTheme.shapes.small
+                        )
+                        .clickable { if (!isLoading) showDialog = true }
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Show loading text or selected country name
+                        Text(
+                            text = if (isLoading && countries.isEmpty()) "Loading countries..."
+                            else tempSelectedCountry?.name ?: "Select Country",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (tempSelectedCountry == null)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurface
+                        )
+                        // Show spinner while loading or arrow icon when ready
+                        if (isLoading && countries.isEmpty()) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Get Info button - only enabled when a country is selected
+            Button(
+                onClick = {
+                    confirmedCountryForDisplay = tempSelectedCountry
                 },
-                label = { Text("Search Country") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused) expanded = true
-                    },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded && filteredCountries.isNotEmpty(),
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    .height(50.dp),
+                enabled = tempSelectedCountry != null,
+                shape = MaterialTheme.shapes.medium
             ) {
-                filteredCountries.take(15).forEach { country ->
-                    DropdownMenuItem(
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AsyncImage(
-                                    model = country.flags.png,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = country.name.common,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        },
-                        onClick = {
-                            viewModel.onSearchQueryChange(country.name.common)
-                            expanded = false
+                Text("Get Info", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Show country info card when a country is confirmed
+        confirmedCountryForDisplay?.let { country ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Flag image loaded from flagcdn.com using iso2 code
+                        AsyncImage(
+                            model = country.flag,
+                            contentDescription = "Flag of ${country.name}",
+                            modifier = Modifier
+                                .size(80.dp)
+                                .background(Color.LightGray, MaterialTheme.shapes.small)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = country.name,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            // Show both ISO2 and ISO3 codes
+                            Text(
+                                text = "ISO: ${country.iso2} / ${country.iso3}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // Country detail rows
+                    DetailItem(
+                        label = "Capital",
+                        value = country.capital ?: "N/A"
+                    )
+                    DetailItem(
+                        label = "Population",
+                        value = "%,d".format(country.population ?: 0)
+                    )
+                    // Build currency string: e.g. "Bangladeshi Taka (৳) BDT"
+                    DetailItem(
+                        label = "Currency",
+                        value = buildString {
+                            append(country.currency_name ?: country.currency ?: "N/A")
+                            if (country.currency_symbol != null) append(" (${country.currency_symbol})")
+                            if (country.currency != null && country.currency_name != null) append(" ${country.currency}")
                         }
                     )
                 }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                // Find the country object that matches the text in the search bar
-                val found = countries.find { it.name.common.equals(searchQuery, ignoreCase = true) }
-                selectedCountryForDisplay = found
-                expanded = false
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = searchQuery.isNotEmpty()
-        ) {
-            Text("Get Info")
-        }
-
-        if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        selectedCountryForDisplay?.let { country ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+    // Country selection dialog
+    if (showDialog) {
+        Dialog(onDismissRequest = { showDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f),
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                color = MaterialTheme.colorScheme.surface
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = country.flags.png,
-                            contentDescription = "Flag of ${country.name.common}",
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(text = country.name.common, style = MaterialTheme.typography.headlineSmall)
-                            Text(text = "Code: ${country.cca2}", style = MaterialTheme.typography.bodyMedium)
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(
+                        text = "Select Country",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Search field to filter countries
+                    OutlinedTextField(
+                        value = internalSearchQuery,
+                        onValueChange = { internalSearchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search country name...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Filter countries based on search query
+                    val filteredList = countries.filter {
+                        it.name.contains(internalSearchQuery, ignoreCase = true)
+                    }
+
+                    if (filteredList.isEmpty() && !isLoading) {
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            Text("No countries found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        // Scrollable list of countries
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(filteredList) { country ->
+                                CountryListItem(
+                                    country = country,
+                                    onClick = {
+                                        tempSelectedCountry = country
+                                        confirmedCountryForDisplay = null // reset card on new selection
+                                        showDialog = false
+                                        internalSearchQuery = ""
+                                    }
+                                )
+                            }
                         }
                     }
-                    
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    
-                    country.capital?.let { capitals ->
-                        Text(text = "Capital: ${capitals.joinToString(", ")}", style = MaterialTheme.typography.bodyLarge)
-                    }
-                    
-                    country.population?.let { pop ->
-                        Text(text = "Population: ${String.format(Locale.getDefault(), "%,d", pop)}", style = MaterialTheme.typography.bodyLarge)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = { showDialog = false },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("CANCEL", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
+    }
+}
 
+// Single country row item shown in the dialog list
+@Composable
+fun CountryListItem(country: CountryNowItem, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        color = Color.Transparent,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Small flag thumbnail next to country name
+            AsyncImage(
+                model = country.flag,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(Color.LightGray, MaterialTheme.shapes.extraSmall)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = country.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+// Reusable row for label + value pairs in the info card
+@Composable
+fun DetailItem(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
