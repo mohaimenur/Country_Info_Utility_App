@@ -64,7 +64,7 @@ fun UtilityApp() {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "Country Information",
+                        "GeoBro",
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     )

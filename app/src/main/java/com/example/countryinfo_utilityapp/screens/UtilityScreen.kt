@@ -41,7 +41,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Country Search",
+            text = "Explore Countries",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -126,7 +126,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
                 enabled = tempSelectedCountry != null,
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text("Get Info", style = MaterialTheme.typography.titleMedium)
+                Text("Explore", style = MaterialTheme.typography.titleMedium)
             }
         }
 
