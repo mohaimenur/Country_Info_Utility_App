@@ -23,10 +23,32 @@ class CountryViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // Holds the country currently chosen in the selection dialog (survives rotation)
+    private val _selectedCountry = MutableStateFlow<CountryNowItem?>(null)
+    val selectedCountry: StateFlow<CountryNowItem?> = _selectedCountry.asStateFlow()
+
+    // Survives rotation - holds the country shown in the info card (new for rotation handling)
+    private val _confirmedCountry = MutableStateFlow<CountryNowItem?>(null)
+    val confirmedCountry: StateFlow<CountryNowItem?> = _confirmedCountry.asStateFlow()
+
+
     init {
         // Fetch countries when ViewModel is first created
         fetchCountries()
     }
+
+
+    // Called when user taps a country in the dialog (new for rotation handling)
+    fun selectCountry(country: CountryNowItem?) {
+        _selectedCountry.value = country
+        _confirmedCountry.value = null // reset info card when new country is selected
+    }
+
+    // Called when user taps Get Info button (new for rotation handling)
+    fun confirmCountry() {
+        _confirmedCountry.value = _selectedCountry.value
+    }
+
 
     fun fetchCountries() {
         viewModelScope.launch {

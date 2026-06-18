@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
@@ -29,14 +31,18 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // These now come from ViewModel so they survive screen rotation (new for rotation handling)
+    val tempSelectedCountry by viewModel.selectedCountry.collectAsState()
+    val confirmedCountryForDisplay by viewModel.confirmedCountry.collectAsState()
+
+    // These are fine in remember - dialog closes and search clears on rotation is acceptable
     var showDialog by remember { mutableStateOf(false) }
-    var tempSelectedCountry by remember { mutableStateOf<CountryNowItem?>(null) }
-    var confirmedCountryForDisplay by remember { mutableStateOf<CountryNowItem?>(null) }
     var internalSearchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -118,7 +124,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
             // Get Info button - only enabled when a country is selected
             Button(
                 onClick = {
-                    confirmedCountryForDisplay = tempSelectedCountry
+                    viewModel.confirmCountry()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -248,8 +254,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
                                 CountryListItem(
                                     country = country,
                                     onClick = {
-                                        tempSelectedCountry = country
-                                        confirmedCountryForDisplay = null // reset card on new selection
+                                        viewModel.selectCountry(country)
                                         showDialog = false
                                         internalSearchQuery = ""
                                     }
