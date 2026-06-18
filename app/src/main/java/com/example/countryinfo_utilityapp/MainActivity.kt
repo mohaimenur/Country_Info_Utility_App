@@ -21,7 +21,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,7 +56,7 @@ fun UtilityAppPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UtilityApp() {
-    var selectedTab by remember { mutableStateOf("Utility") }
+    var selectedTab by rememberSaveable { mutableStateOf("Utility") }
     val appBackgroundColor = OceanBlue
 
     Scaffold(
@@ -80,8 +80,8 @@ fun UtilityApp() {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = "Utility") },
                     label = { Text("Home") },
-                    selected = selectedTab == "Home",
-                    onClick = { selectedTab = "Home" }
+                    selected = selectedTab == "Utility",
+                    onClick = { selectedTab = "Utility" }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },

@@ -15,7 +15,7 @@ fun SettingsScreen() {
     Column(
         Modifier
             .fillMaxSize()
-            .padding(24.dp), 
+            .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Settings Screen", style = MaterialTheme.typography.headlineMedium)
