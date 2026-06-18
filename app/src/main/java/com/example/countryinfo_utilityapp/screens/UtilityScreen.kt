@@ -19,19 +19,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.countryinfo_utilityapp.R
 import com.example.countryinfo_utilityapp.api.CountryNowItem
 import com.example.countryinfo_utilityapp.viewmodels.CountryViewModel
+import com.example.countryinfo_utilityapp.viewmodels.LanguageViewModel
+import java.util.Currency
+import java.util.Locale
 
 @Composable
-fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
+fun UtilityScreen(
+    viewModel: CountryViewModel = viewModel(),
+    languageViewModel: LanguageViewModel = viewModel()
+) {
     val countries by viewModel.countries.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+
+    // Get current language from DataStore via LanguageViewModel
+    val langCode by languageViewModel.selectedLanguageCode.collectAsState()
+    val targetLocale = remember(langCode) { Locale(langCode) }
 
     val tempSelectedCountry by viewModel.selectedCountry.collectAsState()
     val confirmedCountryForDisplay by viewModel.confirmedCountry.collectAsState()
@@ -49,6 +61,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
             error = error,
             tempSelectedCountry = tempSelectedCountry,
             confirmedCountryForDisplay = confirmedCountryForDisplay,
+            targetLocale = targetLocale,
             onSelectClick = { showDialog = true },
             onExploreClick = { viewModel.confirmCountry() },
             onRetryClick = { viewModel.fetchCountries() }
@@ -60,6 +73,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
             error = error,
             tempSelectedCountry = tempSelectedCountry,
             confirmedCountryForDisplay = confirmedCountryForDisplay,
+            targetLocale = targetLocale,
             onSelectClick = { showDialog = true },
             onExploreClick = { viewModel.confirmCountry() },
             onRetryClick = { viewModel.fetchCountries() }
@@ -79,7 +93,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        text = "Select Country",
+                        text = stringResource(R.string.select_country),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -89,7 +103,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
                         value = internalSearchQuery,
                         onValueChange = { internalSearchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search country name...") },
+                        placeholder = { Text(stringResource(R.string.search_placeholder)) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium
@@ -97,13 +111,16 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val filteredList = countries.filter {
-                        it.name.contains(internalSearchQuery, ignoreCase = true)
+                    // Localize country names for filtering/search
+                    val filteredList = countries.filter { country ->
+                        val localizedName = Locale("", country.iso2).getDisplayCountry(targetLocale)
+                        country.name.contains(internalSearchQuery, ignoreCase = true) || 
+                        localizedName.contains(internalSearchQuery, ignoreCase = true)
                     }
 
                     if (filteredList.isEmpty() && !isLoading) {
                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            Text("No countries found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.no_countries_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         LazyColumn(
@@ -113,6 +130,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
                             items(filteredList) { country ->
                                 CountryListItem(
                                     country = country,
+                                    targetLocale = targetLocale,
                                     onClick = {
                                         viewModel.selectCountry(country)
                                         showDialog = false
@@ -129,7 +147,7 @@ fun UtilityScreen(viewModel: CountryViewModel = viewModel()) {
                         onClick = { showDialog = false },
                         modifier = Modifier.align(Alignment.End)
                     ) {
-                        Text("CANCEL", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -144,6 +162,7 @@ fun PortraitLayout(
     error: String?,
     tempSelectedCountry: CountryNowItem?,
     confirmedCountryForDisplay: CountryNowItem?,
+    targetLocale: Locale,
     onSelectClick: () -> Unit,
     onExploreClick: () -> Unit,
     onRetryClick: () -> Unit
@@ -156,7 +175,7 @@ fun PortraitLayout(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Explore Countries",
+            text = stringResource(R.string.explore_countries),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -165,13 +184,13 @@ fun PortraitLayout(
         if (error != null && countries.isEmpty()) {
             ErrorSection(error, onRetryClick)
         } else {
-            SelectionSection(isLoading, countries, tempSelectedCountry, onSelectClick, onExploreClick)
+            SelectionSection(isLoading, countries, tempSelectedCountry, targetLocale, onSelectClick, onExploreClick)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         confirmedCountryForDisplay?.let { country ->
-            InfoCard(country)
+            InfoCard(country, targetLocale = targetLocale)
         }
     }
 }
@@ -183,6 +202,7 @@ fun LandscapeLayout(
     error: String?,
     tempSelectedCountry: CountryNowItem?,
     confirmedCountryForDisplay: CountryNowItem?,
+    targetLocale: Locale,
     onSelectClick: () -> Unit,
     onExploreClick: () -> Unit,
     onRetryClick: () -> Unit
@@ -202,7 +222,7 @@ fun LandscapeLayout(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Explore Countries",
+                text = stringResource(R.string.explore_countries),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -211,7 +231,7 @@ fun LandscapeLayout(
             if (error != null && countries.isEmpty()) {
                 ErrorSection(error, onRetryClick)
             } else {
-                SelectionSection(isLoading, countries, tempSelectedCountry, onSelectClick, onExploreClick)
+                SelectionSection(isLoading, countries, tempSelectedCountry, targetLocale, onSelectClick, onExploreClick)
             }
         }
 
@@ -223,7 +243,7 @@ fun LandscapeLayout(
             verticalArrangement = Arrangement.Center
         ) {
             confirmedCountryForDisplay?.let { country ->
-                InfoCard(country, isLandscape = true)
+                InfoCard(country, isLandscape = true, targetLocale = targetLocale)
             } ?: Spacer(modifier = Modifier.fillMaxSize())
         }
     }
@@ -234,12 +254,17 @@ fun SelectionSection(
     isLoading: Boolean,
     countries: List<CountryNowItem>,
     tempSelectedCountry: CountryNowItem?,
+    targetLocale: Locale,
     onSelectClick: () -> Unit,
     onExploreClick: () -> Unit
 ) {
+    val localizedSelectedName = tempSelectedCountry?.let {
+        Locale("", it.iso2).getDisplayCountry(targetLocale)
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Country",
+            text = stringResource(R.string.country),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 4.dp)
@@ -263,8 +288,8 @@ fun SelectionSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isLoading && countries.isEmpty()) "Loading countries..."
-                    else tempSelectedCountry?.name ?: "Select Country",
+                    text = if (isLoading && countries.isEmpty()) stringResource(R.string.loading_countries)
+                    else localizedSelectedName ?: stringResource(R.string.select_country),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (tempSelectedCountry == null)
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -295,12 +320,64 @@ fun SelectionSection(
         enabled = tempSelectedCountry != null,
         shape = MaterialTheme.shapes.medium
     ) {
-        Text("Explore", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.explore), style = MaterialTheme.typography.labelLarge)
     }
 }
 
 @Composable
-fun InfoCard(country: CountryNowItem, isLandscape: Boolean = false) {
+fun InfoCard(
+    country: CountryNowItem, 
+    isLandscape: Boolean = false,
+    targetLocale: Locale
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val localizedCountryName = remember(country.iso2, targetLocale) {
+        Locale("", country.iso2).getDisplayCountry(targetLocale)
+    }
+
+    val localizedCapital = remember(country.capital, targetLocale) {
+        val capital = country.capital ?: return@remember "N/A"
+        val resId = when (capital.lowercase()) {
+            "canberra" -> R.string.capital_canberra
+            "luanda" -> R.string.capital_luanda
+            "washington, d.c." -> R.string.capital_washington_dc
+            "london" -> R.string.capital_london
+            "new delhi" -> R.string.capital_new_delhi
+            "ottawa" -> R.string.capital_ottawa
+            "paris" -> R.string.capital_paris
+            "berlin" -> R.string.capital_berlin
+            "tokyo" -> R.string.capital_tokyo
+            "dhaka" -> R.string.capital_dhaka
+            "abu dhabi" -> R.string.capital_abu_dhabi
+            "madrid" -> R.string.capital_madrid
+            "rome" -> R.string.capital_rome
+            "cairo" -> R.string.capital_cairo
+            "beijing" -> R.string.capital_beijing
+            else -> null
+        }
+        if (resId != null) context.getString(resId) else capital
+    }
+    
+    val localizedCurrencyInfo = remember(country.currency, targetLocale) {
+        buildString {
+            try {
+                if (country.currency != null) {
+                    val curr = Currency.getInstance(country.currency)
+                    append(curr.getDisplayName(targetLocale))
+                    val symbol = curr.getSymbol(targetLocale)
+                    if (symbol != country.currency) {
+                        append(" ($symbol)")
+                    }
+                    append(" ${country.currency}")
+                } else {
+                    append(country.currency_name ?: "N/A")
+                }
+            } catch (e: Exception) {
+                append(country.currency_name ?: country.currency ?: "N/A")
+            }
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -314,7 +391,7 @@ fun InfoCard(country: CountryNowItem, isLandscape: Boolean = false) {
             ) {
                 AsyncImage(
                     model = country.flag,
-                    contentDescription = "Flag of ${country.name}",
+                    contentDescription = "Flag of $localizedCountryName",
                     modifier = Modifier
                         .size(if (isLandscape) 60.dp else 80.dp)
                         .background(Color.LightGray, MaterialTheme.shapes.small)
@@ -322,12 +399,12 @@ fun InfoCard(country: CountryNowItem, isLandscape: Boolean = false) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = country.name,
+                        text = localizedCountryName,
                         style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "ISO: ${country.iso2} / ${country.iso3}",
+                        text = "${stringResource(R.string.iso)}: ${country.iso2} / ${country.iso3}",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -340,21 +417,18 @@ fun InfoCard(country: CountryNowItem, isLandscape: Boolean = false) {
             )
 
             DetailItem(
-                label = "Capital",
-                value = country.capital ?: "N/A",
+                label = stringResource(R.string.capital),
+                value = localizedCapital,
                 isLandscape = isLandscape
             )
             DetailItem(
-                label = "Population",
-                value = "%,d".format(country.population ?: 0),
+                label = stringResource(R.string.population),
+                value = "%,d".format(targetLocale, country.population ?: 0),
                 isLandscape = isLandscape
             )
             DetailItem(
-                label = "Currency",
-                value = buildString {
-                    append(country.currency_name ?: country.currency ?: "N/A")
-                    if (country.currency_symbol != null) append(" (${country.currency_symbol})")
-                },
+                label = stringResource(R.string.currency),
+                value = localizedCurrencyInfo,
                 isLandscape = isLandscape
             )
         }
@@ -365,7 +439,7 @@ fun InfoCard(country: CountryNowItem, isLandscape: Boolean = false) {
 fun ErrorSection(error: String, onRetryClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = error,
+            text = stringResource(R.string.failed_to_load, error),
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(bottom = 8.dp),
             style = MaterialTheme.typography.bodySmall
@@ -373,7 +447,7 @@ fun ErrorSection(error: String, onRetryClick: () -> Unit) {
         Button(onClick = onRetryClick) {
             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Retry", style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.retry), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -402,7 +476,13 @@ fun DetailItem(label: String, value: String, isLandscape: Boolean = false) {
 }
 
 @Composable
-fun CountryListItem(country: CountryNowItem, onClick: () -> Unit) {
+fun CountryListItem(
+    country: CountryNowItem, 
+    targetLocale: Locale,
+    onClick: () -> Unit
+) {
+    val localizedName = Locale("", country.iso2).getDisplayCountry(targetLocale)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -423,7 +503,7 @@ fun CountryListItem(country: CountryNowItem, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = country.name,
+                text = localizedName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
