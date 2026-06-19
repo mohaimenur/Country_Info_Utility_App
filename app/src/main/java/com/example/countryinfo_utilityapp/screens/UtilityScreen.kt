@@ -44,7 +44,9 @@ fun UtilityScreen(
 
     // Get current language from DataStore via LanguageViewModel
     val langCode by languageViewModel.selectedLanguageCode.collectAsState()
-    val targetLocale = remember(langCode) { Locale(langCode) }
+    val targetLocale = remember(langCode) { 
+        try { Locale.forLanguageTag(langCode) } catch (ignored: Exception) { Locale.getDefault() }
+    }
 
     val tempSelectedCountry by viewModel.selectedCountry.collectAsState()
     val confirmedCountryForDisplay by viewModel.confirmedCountry.collectAsState()
@@ -114,7 +116,7 @@ fun UtilityScreen(
 
                     // Localize country names for filtering/search
                     val filteredList = countries.filter { country ->
-                        val localizedName = Locale("", country.iso2).getDisplayCountry(targetLocale)
+                        val localizedName = Locale.Builder().setRegion(country.iso2).build().getDisplayCountry(targetLocale)
                         country.name.contains(internalSearchQuery, ignoreCase = true) || 
                         localizedName.contains(internalSearchQuery, ignoreCase = true)
                     }
@@ -307,7 +309,7 @@ fun SelectionSection(
     onExploreClick: () -> Unit
 ) {
     val localizedSelectedName = tempSelectedCountry?.let {
-        Locale("", it.iso2).getDisplayCountry(targetLocale)
+        Locale.Builder().setRegion(it.iso2).build().getDisplayCountry(targetLocale)
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -378,14 +380,13 @@ fun InfoCard(
     isLandscape: Boolean = false,
     targetLocale: Locale
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     val localizedCountryName = remember(country.iso2, targetLocale) {
-        Locale("", country.iso2).getDisplayCountry(targetLocale)
+        Locale.Builder().setRegion(country.iso2).build().getDisplayCountry(targetLocale)
     }
 
-    val localizedCapital = remember(country.capital, targetLocale) {
-        val capital = country.capital ?: return@remember "N/A"
-        val resId = when (capital.lowercase()) {
+    val localizedCapitalRes = remember(country.capital, targetLocale) {
+        val capital = country.capital ?: return@remember null
+        when (capital.lowercase()) {
             "canberra" -> R.string.capital_canberra
             "luanda" -> R.string.capital_luanda
             "washington, d.c." -> R.string.capital_washington_dc
@@ -403,9 +404,10 @@ fun InfoCard(
             "beijing" -> R.string.capital_beijing
             else -> null
         }
-        if (resId != null) context.getString(resId) else capital
     }
     
+    val localizedCapital = if (localizedCapitalRes != null) stringResource(localizedCapitalRes) else country.capital ?: "N/A"
+
     val localizedCurrencyInfo = remember(country.currency, targetLocale) {
         buildString {
             try {
@@ -420,7 +422,7 @@ fun InfoCard(
                 } else {
                     append(country.currency_name ?: "N/A")
                 }
-            } catch (e: Exception) {
+            } catch (ignored: Exception) {
                 append(country.currency_name ?: country.currency ?: "N/A")
             }
         }
@@ -531,7 +533,7 @@ fun CountryListItem(
     targetLocale: Locale,
     onClick: () -> Unit
 ) {
-    val localizedName = Locale("", country.iso2).getDisplayCountry(targetLocale)
+    val localizedName = Locale.Builder().setRegion(country.iso2).build().getDisplayCountry(targetLocale)
 
     Surface(
         modifier = Modifier

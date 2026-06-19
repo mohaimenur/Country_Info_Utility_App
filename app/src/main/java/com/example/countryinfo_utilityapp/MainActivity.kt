@@ -36,10 +36,14 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private fun applyStoredLocale() {
-        val code = runBlocking<String> {
+        val code = runBlocking {
             LanguagePreference(this@MainActivity).languageCode.first()
         }
-        val locale = Locale(code)
+        val locale = try {
+            Locale.forLanguageTag(code)
+        } catch (e: Exception) {
+            Locale.getDefault()
+        }
         Locale.setDefault(locale)
         val config = resources.configuration
         config.setLocale(locale)
