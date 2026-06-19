@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -171,14 +172,42 @@ fun PortraitLayout(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // High spacer to push "GeoBro" towards the middle
+        Spacer(modifier = Modifier.height(140.dp))
+
+        // Large "GeoBro" Title Card
+        Surface(
+            modifier = Modifier.padding(bottom = 8.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = R.mipmap.ic_launcher,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp).background(Color.Transparent, MaterialTheme.shapes.small)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = stringResource(R.string.app_name),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 48.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        
         Text(
             text = stringResource(R.string.explore_countries),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 32.dp)
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 24.dp)
         )
 
         if (error != null && countries.isEmpty()) {
@@ -187,11 +216,12 @@ fun PortraitLayout(
             SelectionSection(isLoading, countries, tempSelectedCountry, targetLocale, onSelectClick, onExploreClick)
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        confirmedCountryForDisplay?.let { country ->
-            InfoCard(country, targetLocale = targetLocale)
+        if (confirmedCountryForDisplay != null) {
+            Spacer(modifier = Modifier.height(32.dp))
+            InfoCard(confirmedCountryForDisplay, targetLocale = targetLocale)
         }
+        
+        Spacer(modifier = Modifier.height(48.dp))
     }
 }
 
@@ -221,10 +251,28 @@ fun LandscapeLayout(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Row(
+                modifier = Modifier.padding(bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = R.mipmap.ic_launcher,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.app_name),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 32.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
             Text(
                 text = stringResource(R.string.explore_countries),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -310,17 +358,17 @@ fun SelectionSection(
         }
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(12.dp))
 
     Button(
         onClick = onExploreClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp),
+            .height(48.dp),
         enabled = tempSelectedCountry != null,
         shape = MaterialTheme.shapes.medium
     ) {
-        Text(stringResource(R.string.explore), style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.explore), style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -381,10 +429,10 @@ fun InfoCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
-        Column(modifier = Modifier.padding(if (isLandscape) 12.dp else 20.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -393,26 +441,28 @@ fun InfoCard(
                     model = country.flag,
                     contentDescription = "Flag of $localizedCountryName",
                     modifier = Modifier
-                        .size(if (isLandscape) 60.dp else 80.dp)
-                        .background(Color.LightGray, MaterialTheme.shapes.small)
+                        .size(if (isLandscape) 56.dp else 72.dp)
+                        .background(Color.LightGray.copy(alpha = 0.3f), MaterialTheme.shapes.small)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
                         text = localizedCountryName,
                         style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "${stringResource(R.string.iso)}: ${country.iso2} / ${country.iso3}",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = if (isLandscape) 8.dp else 16.dp),
-                thickness = 1.dp,
+                modifier = Modifier.padding(vertical = if (isLandscape) 8.dp else 12.dp),
+                thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant
             )
 
