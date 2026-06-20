@@ -119,9 +119,11 @@ fun SettingsScreen(languageViewModel: LanguageViewModel = viewModel()) {
     }
 
     // Confirmation dialog before restarting app
+    val dismissDialog = { pendingLanguage = null }
+
     pendingLanguage?.let { language ->
         AlertDialog(
-            onDismissRequest = { pendingLanguage = null },
+            onDismissRequest = dismissDialog,
             title = {
                 Text(stringResource(R.string.change_language_title))
             },
@@ -133,14 +135,14 @@ fun SettingsScreen(languageViewModel: LanguageViewModel = viewModel()) {
                     onClick = {
                         // Save and apply the new language
                         languageViewModel.selectLanguage(language.code, context as Activity)
-                        pendingLanguage = null
+                        dismissDialog()
                     }
                 ) {
                     Text(stringResource(R.string.apply), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingLanguage = null }) {
+                TextButton(onClick = dismissDialog) {
                     Text(stringResource(R.string.cancel))
                 }
             }

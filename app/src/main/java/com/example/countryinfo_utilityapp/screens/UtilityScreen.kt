@@ -36,7 +36,7 @@ import java.util.Locale
 @Composable
 fun UtilityScreen(
     viewModel: CountryViewModel = viewModel(),
-    languageViewModel: LanguageViewModel = viewModel()
+    languageViewModel: LanguageViewModel = viewModel(),
 ) {
     val countries by viewModel.countries.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -45,13 +45,13 @@ fun UtilityScreen(
     // Get current language from DataStore via LanguageViewModel
     val langCode by languageViewModel.selectedLanguageCode.collectAsState()
     val targetLocale = remember(langCode) { 
-        try { Locale.forLanguageTag(langCode) } catch (ignored: Exception) { Locale.getDefault() }
+        try { Locale.forLanguageTag(langCode) } catch (_: Exception) { Locale.getDefault() }
     }
 
     val tempSelectedCountry by viewModel.selectedCountry.collectAsState()
     val confirmedCountryForDisplay by viewModel.confirmedCountry.collectAsState()
 
-    var showDialog by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(value = false) }
     var internalSearchQuery by remember { mutableStateOf("") }
 
     val configuration = LocalConfiguration.current
@@ -78,14 +78,15 @@ fun UtilityScreen(
             confirmedCountryForDisplay = confirmedCountryForDisplay,
             targetLocale = targetLocale,
             onSelectClick = { showDialog = true },
-            onExploreClick = { viewModel.confirmCountry() },
-            onRetryClick = { viewModel.fetchCountries() }
-        )
+            onExploreClick = { viewModel.confirmCountry() }
+        ) { viewModel.fetchCountries() }
     }
+
+    val dismissDialog = { showDialog = false }
 
     // Country selection dialog
     if (showDialog) {
-        Dialog(onDismissRequest = { showDialog = false }) {
+        Dialog(onDismissRequest = dismissDialog) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -136,7 +137,7 @@ fun UtilityScreen(
                                     targetLocale = targetLocale,
                                     onClick = {
                                         viewModel.selectCountry(country)
-                                        showDialog = false
+                                        dismissDialog()
                                         internalSearchQuery = ""
                                     }
                                 )
@@ -147,7 +148,7 @@ fun UtilityScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     TextButton(
-                        onClick = { showDialog = false },
+                        onClick = dismissDialog,
                         modifier = Modifier.align(Alignment.End)
                     ) {
                         Text(stringResource(R.string.cancel), fontWeight = FontWeight.Bold)
@@ -168,7 +169,7 @@ fun PortraitLayout(
     targetLocale: Locale,
     onSelectClick: () -> Unit,
     onExploreClick: () -> Unit,
-    onRetryClick: () -> Unit
+    onRetryClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -212,7 +213,7 @@ fun PortraitLayout(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        if (error != null && countries.isEmpty()) {
+        if ((error != null) && countries.isEmpty()) {
             ErrorSection(error, onRetryClick)
         } else {
             SelectionSection(isLoading, countries, tempSelectedCountry, targetLocale, onSelectClick, onExploreClick)
@@ -278,7 +279,7 @@ fun LandscapeLayout(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            if (error != null && countries.isEmpty()) {
+            if ((error != null) && countries.isEmpty()) {
                 ErrorSection(error, onRetryClick)
             } else {
                 SelectionSection(isLoading, countries, tempSelectedCountry, targetLocale, onSelectClick, onExploreClick)
@@ -406,7 +407,7 @@ fun InfoCard(
         }
     }
     
-    val localizedCapital = if (localizedCapitalRes != null) stringResource(localizedCapitalRes) else country.capital ?: "N/A"
+    val localizedCapital = localizedCapitalRes?.let { stringResource(it) } ?: country.capital ?: "N/A"
 
     val localizedCurrencyInfo = remember(country.currency, targetLocale) {
         buildString {
@@ -420,10 +421,10 @@ fun InfoCard(
                     }
                     append(" ${country.currency}")
                 } else {
-                    append(country.currency_name ?: "N/A")
+                    append(country.currencyName ?: "N/A")
                 }
-            } catch (ignored: Exception) {
-                append(country.currency_name ?: country.currency ?: "N/A")
+            } catch (_: Exception) {
+                append(country.currencyName ?: country.currency ?: "N/A")
             }
         }
     }

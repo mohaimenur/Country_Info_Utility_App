@@ -14,7 +14,7 @@ class CountryViewModel : ViewModel() {
     private val _countries = MutableStateFlow<List<CountryNowItem>>(emptyList())
     val countries: StateFlow<List<CountryNowItem>> = _countries.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(value = false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
@@ -45,11 +45,11 @@ class CountryViewModel : ViewModel() {
             _error.value = null
             try {
                 // Parallel fetching with error handling for each
-                val flagsDef = async { try { RetrofitInstance.api.getFlags() } catch (e: Exception) { null } }
-                val capitalsDef = async { try { RetrofitInstance.api.getCapitals() } catch (e: Exception) { null } }
-                val populationsDef = async { try { RetrofitInstance.api.getPopulations() } catch (e: Exception) { null } }
-                val currenciesDef = async { try { RetrofitInstance.api.getCurrencies() } catch (e: Exception) { null } }
-                val isoDef = async { try { RetrofitInstance.api.getIsoCodes() } catch (e: Exception) { null } }
+                val flagsDef = async { try { RetrofitInstance.api.getFlags() } catch (_: Exception) { null } }
+                val capitalsDef = async { try { RetrofitInstance.api.getCapitals() } catch (_: Exception) { null } }
+                val populationsDef = async { try { RetrofitInstance.api.getPopulations() } catch (_: Exception) { null } }
+                val currenciesDef = async { try { RetrofitInstance.api.getCurrencies() } catch (_: Exception) { null } }
+                val isoDef = async { try { RetrofitInstance.api.getIsoCodes() } catch (_: Exception) { null } }
 
                 val flags = flagsDef.await()?.body()?.data ?: emptyList()
                 val capitals = capitalsDef.await()?.body()?.data ?: emptyList()
@@ -62,12 +62,16 @@ class CountryViewModel : ViewModel() {
                     return@launch
                 }
 
-                val capitalMap = capitals.associate { it.name to it.capital }
-                val currencyMap = currencies.associate { it.name to Triple(it.currency, it.currency_name, it.currency_symbol) }
-                val populationMap = populations.associate { it.country to (it.populationCounts.maxByOrNull { pc -> pc.year }?.value) }
-                val isoMap = isoCodes.associate { it.name to Pair(it.Iso2, it.Iso3) }
+                val capitalMap = capitals.associateBy({ it.name }) { it.capital }
+                val currencyMap = currencies.associateBy({ it.name }) {
+                    Triple(it.currency, it.currencyName, it.currencySymbol)
+                }
 
-                val merged = flags.map { flag ->
+                // Get the latest population by picking the highest year entry
+                val populationMap = populations.associateBy({ it.country }) { it.populationCounts.maxByOrNull { pc -> pc.year }?.value }
+                val isoMap = isoCodes.associateBy({ it.name }) { Pair(it.iso2, it.iso3) }
+
+                val merged = flags.asSequence().map { flag ->
                     val iso2 = isoMap[flag.name]?.first ?: ""
                     CountryNowItem(
                         name = flag.name,
@@ -77,10 +81,10 @@ class CountryViewModel : ViewModel() {
                         capital = capitalMap[flag.name],
                         population = populationMap[flag.name],
                         currency = currencyMap[flag.name]?.first,
-                        currency_name = currencyMap[flag.name]?.second,
-                        currency_symbol = currencyMap[flag.name]?.third
+                        currencyName = currencyMap[flag.name]?.second,
+                        currencySymbol = currencyMap[flag.name]?.third,
                     )
-                }.sortedBy { it.name }
+                }.toList().sortedBy { it.name }
 
                 _countries.value = merged
                 _error.value = null

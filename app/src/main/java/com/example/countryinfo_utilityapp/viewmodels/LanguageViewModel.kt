@@ -21,7 +21,7 @@ class LanguageViewModel(application: Application) : AndroidViewModel(application
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = "en"  // default before DataStore loads
+            initialValue = "en",  // default before DataStore loads
         )
 
     // Called when user taps a language — saves to DataStore + applies locale
@@ -34,7 +34,7 @@ class LanguageViewModel(application: Application) : AndroidViewModel(application
 
     // Applies the selected locale to the app
     private fun applyLocale(code: String, context: android.content.Context) {
-        val locale = Locale(code)
+        val locale = Locale.forLanguageTag(code)
         Locale.setDefault(locale)
         val config = android.content.res.Configuration(context.resources.configuration)
         config.setLocale(locale)
@@ -42,7 +42,7 @@ class LanguageViewModel(application: Application) : AndroidViewModel(application
         // Restart activity to apply language change
         val activity = context as? Activity
         val intent = activity?.intent
-        if (activity != null && intent != null) {
+        if ((activity != null) && (intent != null)) {
             activity.finish()
             activity.startActivity(intent)
         }

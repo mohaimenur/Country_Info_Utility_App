@@ -1,5 +1,6 @@
 package com.example.countryinfo_utilityapp.api
 
+import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
@@ -26,16 +27,20 @@ data class CurrencyResponse(val error: Boolean, val data: List<CurrencyItem>)
 data class CurrencyItem(
     val name: String,
     val currency: String,           // currency code e.g. BDT
-    val currency_name: String? = null,    // full name e.g. Bangladeshi Taka
-    val currency_symbol: String? = null   // symbol e.g. ৳
+    @SerializedName("currency_name")
+    val currencyName: String? = null,    // full name e.g. Bangladeshi Taka
+    @SerializedName("currency_symbol")
+    val currencySymbol: String? = null   // symbol e.g. ৳
 )
 
 // --- ISO endpoint models ---
 data class IsoResponse(val error: Boolean, val data: List<IsoItem>)
 data class IsoItem(
     val name: String,
-    val Iso2: String,   // 2 letter code e.g. BD
-    val Iso3: String    // 3 letter code e.g. BGD
+    @SerializedName("Iso2")
+    val iso2: String,   // 2 letter code e.g. BD
+    @SerializedName("Iso3")
+    val iso3: String    // 3 letter code e.g. BGD
 )
 
 // --- Merged model used in UI ---
@@ -48,8 +53,8 @@ data class CountryNowItem(
     val capital: String? = null,        // capital city
     val population: Long? = null,       // latest population count
     val currency: String? = null,       // currency code e.g. BDT
-    val currency_name: String? = null,  // currency full name
-    val currency_symbol: String? = null // currency symbol
+    val currencyName: String? = null,  // currency full name
+    val currencySymbol: String? = null // currency symbol
 )
 
 interface CountryApi {

@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         }
         val locale = try {
             Locale.forLanguageTag(code)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Locale.getDefault()
         }
         Locale.setDefault(locale)
